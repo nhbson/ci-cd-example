@@ -14,7 +14,7 @@ cd $PROJECT_NAME
 
 echo "Creating docker-compose.yml..."
 
-cat <<EOF > docker-compose.yml
+cat <<'EOF' > docker-compose.yml
 version: "3.9"
 
 services:
@@ -34,6 +34,8 @@ services:
     build:
       context: ./docker/php
     container_name: laravel-app
+    ports:
+      - "8000:8000"
     volumes:
       - ./src:/var/www
     working_dir: /var/www
@@ -77,10 +79,9 @@ volumes:
   mysql_data:
 EOF
 
-
 echo "Creating PHP Dockerfile..."
 
-cat <<EOF > docker/php/Dockerfile
+cat <<'EOF' > docker/php/Dockerfile
 FROM php:8.4-cli-alpine
 
 RUN apk add --no-cache \
@@ -111,24 +112,38 @@ RUN printf "\n" | pecl install swoole && docker-php-ext-enable swoole
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 WORKDIR /var/www
 EOF
 
-
 echo "Creating entrypoint..."
 
-cat <<EOF > docker/php/entrypoint.sh
+cat <<'EOF' > docker/php/entrypoint.sh
 #!/bin/sh
 
-php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000
+set -e
+
+cd /var/www
+
+php artisan config:clear || true
+php artisan route:clear || true
+php artisan cache:clear || true
+
+exec php artisan octane:start \
+  --server=swoole \
+  --host=0.0.0.0 \
+  --port=8000 \
+  --workers=4 \
+  --task-workers=2
 EOF
 
 chmod +x docker/php/entrypoint.sh
 
-
 echo "Creating nginx config..."
 
-cat <<EOF > docker/nginx/default.conf
+cat <<'EOF' > docker/nginx/default.conf
 server {
     listen 80;
     server_name localhost;
@@ -137,67 +152,56 @@ server {
     index index.php index.html;
 
     location / {
-        try_files \$uri \$uri/ @octane;
+        try_files $uri $uri/ @octane;
     }
 
     location @octane {
+
         proxy_pass http://app:8000;
+
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header Scheme \$scheme;
-        proxy_set_header SERVER_PORT \$server_port;
+
+        proxy_set_header Host $host;
+        proxy_set_header Scheme $scheme;
+        proxy_set_header SERVER_PORT $server_port;
+        proxy_set_header REMOTE_ADDR $remote_addr;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location ~* \.(jpg|jpeg|png|gif|css|js|ico|svg)\$ {
+    location ~* \.(jpg|jpeg|png|gif|css|js|ico|svg)$ {
         expires max;
         log_not_found off;
     }
 }
 EOF
 
-echo "Preparing src directory..."
+echo "Preparing src..."
 
-rm -rf src/*
-rm -rf src/.*
-
-mkdir -p src
+rm -rf src
+mkdir src
 
 echo "Installing Laravel..."
 
-docker run --rm \
--v $(pwd)/src:/app \
-composer:2 \
-composer create-project laravel/laravel laravel
-
-
-echo "Moving Laravel files..."
-
-mv src/laravel/* src/
-mv src/laravel/.* src/ 2>/dev/null || true
-rm -rf src/laravel
+docker run --rm -v $(pwd)/src:/app -w /app composer:2 composer create-project laravel/laravel .
 
 cd src
 
 echo "Installing Laravel Octane..."
 
-docker run --rm \
--v $(pwd):/app \
--w /app \
-composer:2 \
-composer require laravel/octane
-
+docker run --rm -v $(pwd):/app -w /app composer:2 composer require laravel/octane
 
 echo "Installing Octane Swoole..."
 
-docker run --rm \
--v $(pwd):/app \
--w /app \
-php:8.4-cli \
-php artisan octane:install --server=swoole
+docker run --rm -v $(pwd):/app -w /app php:8.4-cli sh -c "cd /app && php artisan octane:install --server=swoole"
 
+echo "Fixing permissions..."
 
 chmod -R 775 storage bootstrap/cache
-
 
 echo ""
 echo "Project ready!"
@@ -208,3 +212,5 @@ echo "docker compose up -d --build"
 echo ""
 echo "Open:"
 echo "http://localhost"
+echo "or"
+echo "http://localhost:8000"
