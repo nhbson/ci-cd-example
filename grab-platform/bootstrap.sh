@@ -71,7 +71,7 @@ services:
       MYSQL_DATABASE: laravel
     command: --default-authentication-plugin=mysql_native_password
     ports:
-      - "3306:3306"
+      - "3309:3306"
     volumes:
       - mysql_data:/var/lib/mysql
 
