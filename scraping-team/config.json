@@ -1,0 +1,15 @@
+{
+  "areas": {
+    "Saitama": "https://www.hotpepper.jp/SA13/lst/",
+    "Chiba": "https://www.hotpepper.jp/SA14/lst/",
+    "Nagoya": "https://www.hotpepper.jp/SA33/Y200/lst/",
+    "Osaka": "https://www.hotpepper.jp/SA23/lst/"
+  },
+  "spreadsheet_id": "14OHoOhmtEgTA8U3Y0aQexUm2AtzlHQ8m44SVh0bfnwg",
+  "chatwork": {
+    "token": "your_chatwork_token",
+    "room_id": "your_room_id",
+    "method_name": "hotpepper"
+  },
+  "max_threads": 10
+}

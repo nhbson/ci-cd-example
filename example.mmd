@@ -1,0 +1,18 @@
+sequenceDiagram
+    participant Provider as Zoom/Twilio
+    participant API as API Gateway
+    participant SQS as Amazon SQS (Buffer)
+    participant Lambda as AWS Lambda (Processor)
+    participant RDS as Aurora PostgreSQL
+    participant S3 as AWS S3 (Audio)
+
+    Provider->>API: Webhook (JSON Call Log)
+    API->>SQS: Push Raw JSON
+    API-->>Provider: 200 OK (Instant)
+
+    Note over SQS, Lambda: Batch Processing (20 logs per run)
+
+    SQS->>Lambda: Trigger Batch
+    Lambda->>RDS: Bulk Insert (Optimized)
+    Lambda->>S3: Download & Sync Recording
+    Lambda-->>Staff: WebSocket: Recording Available
