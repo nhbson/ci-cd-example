@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  # 🚪 The Tunnel: The only way in
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    restart: always
+    networks:
+      - internal
+
+  # 🚀 Nginx: Receives traffic from the Tunnel
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./www:/var/www
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    restart: always
+    networks:
+      - internal
+    # NO PORTS MAPPED. Invisible to the host IP.
+
+  app1:
+    build: .
+    command: php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000 --workers=4
+    networks:
+      - internal
+
+  app2:
+    build: .
+    command: php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000 --workers=4
+    networks:
+      - internal
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: app
+    networks:
+      - internal
+    # TCP ONLY: Only app1/app2 can see this via "mysql:3306"
+
+  redis:
+    image: redis:7
+    networks:
+      - internal
+
+  soketi:
+    image: quay.io/soketi/soketi:latest
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge

@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     build-essential \
     autoconf \
-    && docker-php-ext-install pdo pdo_mysql
+    && docker-php-ext-install pdo pdo_mysql pcntl
 
 # Install Swoole
 RUN pecl install swoole \
@@ -21,7 +21,7 @@ RUN pecl install swoole \
 RUN pecl install redis \
     && docker-php-ext-enable redis
 
-# Copy Laravel source
+# Copy Laravel project
 COPY ./www .
 
 CMD ["php", "-v"]
