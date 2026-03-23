@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app_blue:
+    build: .
+    container_name: app_blue
+    networks:
+      - crm_net
+
+  app_green:
+    build: .
+    container_name: app_green
+    networks:
+      - crm_net
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app_blue
+      - app_green
+    networks:
+      - crm_net
+
+networks:
+  crm_net:

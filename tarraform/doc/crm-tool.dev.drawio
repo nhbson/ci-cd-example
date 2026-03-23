@@ -1,0 +1,35 @@
+User → Nginx (Host)
+           ↓
+     Docker Containers
+     ├── app_blue  (old)
+     └── app_green (new)
+
+crm-devops/
+├── terraform/
+│   └── dev/
+├── docker/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── nginx.conf
+├── deploy/
+│   ├── deploy.sh
+│   ├── switch.sh
+│   └── rollback.sh
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+└── README.md
+
+
+A.I Upgrade 
+                ┌──────────────┐
+User ─────────▶ │ Nginx (LB)   │
+                └──────┬───────┘
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+   app replica 1  app replica 2  app replica 3
+        │              │              │
+        └─────── Docker Swarm ───────┘
+                       │
+                   MySQL
