@@ -1,0 +1,6 @@
+selenium==4.14.0
+beautifulsoup4
+gspread
+pandas
+PyDrive
+requests

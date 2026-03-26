@@ -1,14 +1,11 @@
-﻿{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Python: Current File (Scraping Team)",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "python": "${workspaceFolder}/venv/Scripts/python.exe",
-            "justMyCode": true
-        }
-    ]
+{
+  "configurations": [
+    {
+      "name": "Python: Current File",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    }
+  ]
 }

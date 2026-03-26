@@ -1,0 +1,82 @@
+[
+    {
+        "hw": "門真(AFC)",
+        "id": "takada.keiko002@jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "大阪東",
+        "id": "af_hw_osakahigashi@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "淀川",
+        "id": "af_hw_osakanishi@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "堺",
+        "id": "af_hw_osakaminami@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "枚方",
+        "id": "af_hw_keihan@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "尼崎",
+        "id": "af_hw_hw_hyogo@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "京都西陣",
+        "id": "af_hw_kyotokita@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "京都七条",
+        "id": "af_hw_kyotominami@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "名古屋南",
+        "id": "af_hw_chubu@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "八王子\n（パートのみ）",
+        "id": "af_hw_hachioji@ml.jp.panasonic.com",
+        "pw": "afree:314"
+    },
+    {
+        "hw": "川崎北",
+        "id": "af_hw_kawasaki@ml.jp.panasonic.com",
+        "pw": "afree:314"
+    },
+    {
+        "hw": "千葉",
+        "id": "af_hw_chiba@ml.jp.panasonic.com",
+        "pw": "afree:314"
+    },
+    {
+        "hw": "船橋",
+        "id": "af_hw_funabashi@ml.jp.panasonic.com",
+        "pw": "afree:314"
+    },
+    {
+        "hw": "札幌",
+        "id": "af_hw_sapporo@ml.jp.panasonic.com",
+        "pw": "afree:314"
+    },
+    {
+        "hw": "札門真(AFH)",
+        "id": "af_saiyo_w@ml.jp.panasonic.com",
+        "pw": "afree+123"
+    },
+    {
+        "hw": "品川",
+        "id": "af_saiyo_e@ml.jp.panasonic.com",
+        "pw": "afree:314a"
+    }
+]

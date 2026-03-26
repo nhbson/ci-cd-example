@@ -2,17 +2,17 @@
     {
         "url": "https://beauty.hotpepper.jp/svcSE/macEF/salon/",
         "sheet": "東北ヘアサロン",
-        "area": "青森・八戸・弘前"
+        "area": "青森"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSE/macEC/salon/",
         "sheet": "東北ヘアサロン",
-        "area": "岩手・盛岡"
+        "area": "岩手"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSE/macEA/salon/",
         "sheet": "東北ヘアサロン",
-        "area": "仙台・宮城"
+        "area": "仙台"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSE/macEG/salon/",
@@ -32,7 +32,7 @@
     {
         "url": "https://beauty.hotpepper.jp/svcSE/macEH/salon/",
         "sheet": "東北ヘアサロン",
-        "area": "いわき・福島"
+        "area": "福島"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSD/macDA/salon/",
@@ -52,17 +52,17 @@
     {
         "url": "https://beauty.hotpepper.jp/svcSD/macDE/salon/",
         "sheet": "北海道ヘアサロン",
-        "area": "道央・道南"
+        "area": "道央"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSD/macDC/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "道東・道北"
+        "area": "道東"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCE/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "一宮・犬山..."
+        "area": "一宮"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCB/salon/",
@@ -72,12 +72,12 @@
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCL/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "各務原・大垣"
+        "area": "各務原"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCA/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "名駅・栄"
+        "area": "名駅"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCI/salon/",
@@ -85,48 +85,48 @@
         "area": "名古屋港"
     },
     {
-        "url": "https://beauty.hotpepper.jp/svcSC/macCF/",
+        "url": "https://beauty.hotpepper.jp/svcSC/macCF/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "春日井・尾張旭"
+        "area": "春日井"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCM/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "星ヶ丘・藤が丘"
+        "area": "星ヶ丘"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCH/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "八事・平針"
+        "area": "八事"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCJ/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "日進・豊田"
+        "area": "日進"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCK/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "その他静岡県"
+        "area": "静岡県その他"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCC/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "静岡・藤枝"
+        "area": "静岡市"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSC/macCD/salon/",
         "sheet": "東海ヘアサロン",
-        "area": "浜松・磐田"
+        "area": "浜松"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSF/macFE/salon/",
-        "sheet": "東海ヘアサロン",
+        "sheet": "中国ヘアサロン",
         "area": "山口"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSF/macFA/salon/",
-        "sheet": "東海ヘアサロン",
+        "sheet": "中国ヘアサロン",
         "area": "広島"
     },
     {
@@ -137,7 +137,7 @@
     {
         "url": "https://beauty.hotpepper.jp/svcSF/macFB/salon/",
         "sheet": "中国ヘアサロン",
-        "area": "福山・尾道"
+        "area": "福山"
     },
     {
         "url": "https://beauty.hotpepper.jp/svcSF/macFF/salon/",
@@ -147,6 +147,6 @@
     {
         "url": "https://beauty.hotpepper.jp/svcSF/macFC/salon/",
         "sheet": "中国ヘアサロン",
-        "area": "岡山・倉敷"
+        "area": "岡山"
     }
 ]
