@@ -1,250 +1,154 @@
-🚀 🔥 WHAT YOU WILL GET
+# 🔥 Dynamic Fail2Ban Setup for Nginx + Docker + AWS EC2
 
-✅ Multi-instance Laravel (Octane)
-✅ Nginx load balancer + rate limit
-✅ Redis (queue + cache)
-✅ MySQL
-✅ Queue workers
-✅ CPU + memory limits
-✅ Network latency simulation
-✅ Load testing
-✅ One-command scripts
+Protect your Nginx server from brute-force attacks with **Fail2Ban** while automatically whitelisting Docker containers, localhost, and optional AWS IPs.
 
-📁 1. FINAL STRUCTURE
-production-simulator/
-├── docker-compose.yml
-├── Dockerfile
-├── nginx/
-│   └── default.conf
-├── scripts/
-│   ├── up.sh
-│   ├── down.sh
-│   ├── latency-on.sh
-│   ├── latency-off.sh
-│   ├── loadtest.sh
-│   └── scale.sh
+This guide is beginner-friendly with step numbers, emojis, and clickable references.
 
-🐳 2. Dockerfile (Octane + Swoole)
-FROM php:8.2-cli
+---
 
-WORKDIR /var/www
+## 🎯 Objective
 
-COPY . .
+1. Protect Nginx from brute-force attacks
+2. Automatically whitelist safe IPs (localhost, Docker, AWS)
+3. Send email alerts when malicious activity is detected
+4. Update whitelist dynamically when new Docker containers start
 
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip \
-    && docker-php-ext-install pdo pdo_mysql
+---
 
-# Install Swoole
-RUN pecl install swoole && docker-php-ext-enable swoole
+## 🛠 Prerequisites
 
-CMD ["php", "-v"]
+* Ubuntu EC2 server
+* Nginx installed
+* Docker installed
+* `sudo` privileges
+* (Optional) AWS CLI configured for Elastic IP detection
+* Valid email address for alerts
 
-🌐 3. NGINX (Load Balancer + Rate Limit)
+---
 
-nginx/default.conf
+## 1️⃣ Upload the Script
 
-upstream backend {
-    server app1:8000;
-    server app2:8000;
-}
+Copy the script to your EC2 server:
 
-limit_req_zone $binary_remote_addr zone=api_limit:10m rate=20r/s;
+```bash
+scp setup-fail2ban-dynamic.sh ubuntu@YOUR_EC2_IP:/home/ubuntu/
+```
 
-server {
-    listen 80;
+---
 
-    location / {
-        proxy_pass http://backend;
+## 2️⃣ Make Script Executable
 
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+```bash
+chmod +x setup-fail2ban-dynamic.sh
+```
 
-        limit_req zone=api_limit burst=50 nodelay;
-    }
-}
-⚙️ 4. docker-compose.yml (PRO SIMULATION)
+---
 
-version: "3.9"
+## 3️⃣ Edit Email Variable
 
-services:
+Open the script and set your email for alerts:
 
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    ports:
-      - "8000:80"
-    volumes:
-      - .:/var/www
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - app1
-      - app2
+```bash
+nano setup-fail2ban-dynamic.sh
+# Change:
+EMAIL_ALERT="your-email@example.com"
+```
 
-  app1:
-    build: .
-    container_name: app1
-    command: php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000
-    volumes:
-      - .:/var/www
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1G
-    depends_on:
-      - redis
-      - mysql
+---
 
-  app2:
-    build: .
-    container_name: app2
-    command: php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000
-    volumes:
-      - .:/var/www
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1G
-    depends_on:
-      - redis
-      - mysql
+## 4️⃣ Run the Script
 
-  redis:
-    image: redis:7
-    container_name: redis
-    ports:
-      - "6379:6379"
+```bash
+sudo ./setup-fail2ban-dynamic.sh
+```
 
-  mysql:
-    image: mysql:8
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: app
-    ports:
-      - "3306:3306"
+✅ **What the script does:**
 
-  queue:
-    build: .
-    container_name: queue
-    command: php artisan queue:work
-    depends_on:
-      - redis
-      - mysql
-⚡ 5. SCRIPTS (THIS IS THE MAGIC)
-🚀 up.sh (start everything)
-#!/bin/bash
+* Installs Fail2Ban, `mailutils`, and `jq`
+* Detects Docker IPs dynamically
+* (Optional) Detects AWS public IPs
+* Creates a custom Nginx filter for HTTP 429/500 errors
+* Configures a Fail2Ban jail: `nginx-loadtest`
+* Sets up log file `/var/log/fail2ban-banned-ips.log`
+* Configures daily log rotation (keep 30 days, compressed)
+* Provides helper script `/usr/local/bin/fail2ban-update-whitelist.sh`
 
-echo "🚀 Starting production simulator..."
+---
 
-docker compose up -d --build
+## 5️⃣ Post-Setup Commands
 
-echo "✅ Running: http://localhost:8000"
-🛑 down.sh
-#!/bin/bash
+| ✅ Task                                 | 🖥 Command                                         |
+| -------------------------------------- | -------------------------------------------------- |
+| Check Fail2Ban status                  | `sudo fail2ban-client status nginx-loadtest`       |
+| Refresh whitelist after Docker changes | `sudo /usr/local/bin/fail2ban-update-whitelist.sh` |
+| View banned IPs log                    | `cat /var/log/fail2ban-banned-ips.log`             |
+| Restart Fail2Ban                       | `sudo systemctl restart fail2ban`                  |
 
-echo "🛑 Stopping..."
+---
 
-docker compose down
-sudo tc qdisc del dev lo root 2>/dev/null
+## 6️⃣ How It Works
 
-echo "✅ Cleaned"
-🌐 latency-on.sh
-#!/bin/bash
+### 🔹 Dynamic IP Detection
 
-echo "🌐 Adding real network simulation..."
+* **Docker IPs** – Whitelisted automatically
+* **AWS IPs** – Optional; whitelist Elastic IPs if AWS CLI configured
 
-sudo tc qdisc add dev lo root netem delay 50ms 10ms loss 0.5%
+### 🔹 Fail2Ban Jail
 
-echo "✅ Latency ON"
-🌐 latency-off.sh
-#!/bin/bash
+* Jail name: `nginx-loadtest`
+* Monitored logs: `/var/log/nginx/access.log`
+* Max retries: `100`
+* Find time: `60 seconds`
+* Ban time: `600 seconds (10 min)`
+* Whitelisted IPs: localhost, Docker IPs, AWS IPs
 
-sudo tc qdisc del dev lo root
+### 🔹 Log Rotation
 
-echo "❌ Latency OFF"
-🔥 loadtest.sh (simulate users)
-#!/bin/bash
+* File: `/var/log/fail2ban-banned-ips.log`
+* Rotate daily, keep 30 days
+* Compressed automatically
 
-echo "🔥 Simulating 500 concurrent users..."
+### 🔹 Dynamic Whitelist Script
 
-wrk -t8 -c500 -d60s http://localhost:8000
+* Path: `/usr/local/bin/fail2ban-update-whitelist.sh`
+* Updates `ignoreip` dynamically when Docker containers start
+* Reloads Fail2Ban automatically
 
-echo "✅ Test complete"
-⚡ scale.sh (simulate auto scaling)
-#!/bin/bash
+---
 
-echo "📈 Scaling app instances..."
+## 7️⃣ Tips for Juniors
 
-docker compose up -d --scale app1=3 --scale app2=3
+* ✅ Verify that email alerts are working
+* ✅ Docker whitelist updates automatically; AWS requires configuration if needed
+* ✅ Backup `/etc/fail2ban/jail.local` before making changes
+* ✅ Adjust `maxretry`, `findtime`, and `bantime` based on traffic
 
-echo "✅ Scaled to 6 instances"
-🧪 6. HOW TO RUN (REAL FLOW)
-Step 1 — Start system
-chmod +x scripts/*.sh
-./scripts/up.sh
-Step 2 — Add latency (simulate internet)
-./scripts/latency-on.sh
-Step 3 — Load test
-./scripts/loadtest.sh
-Step 4 — Scale system
-./scripts/scale.sh
-Step 5 — Stop
-./scripts/down.sh
-📊 7. WHAT THIS SIMULATES (VERY CLOSE TO AWS)
-Feature	Simulated
-Load balancer (ALB)	✅ (Nginx)
-Multiple instances	✅
-Redis (ElastiCache)	✅
-MySQL (RDS)	✅
-Queue workers	✅
-Network latency	✅
-Rate limiting	✅
-Scaling	✅
-⚠️ HONEST TRUTH (Senior insight)
+---
 
-This is:
+## 📄 References (Clickable)
 
-👉 ~90% close to AWS production
+* [Fail2Ban Official Documentation](https://www.fail2ban.org/wiki/index.php/Main_Page)
+* [Logrotate Manual](https://linux.die.net/man/8/logrotate)
+* [Docker Network Inspect](https://docs.docker.com/engine/reference/commandline/network_inspect/)
 
-Missing:
+---
 
-Multi-AZ network latency
+## 💡 Quick Command Summary
 
-Real ALB behavior
+```bash
+# Check Fail2Ban status
+sudo fail2ban-client status nginx-loadtest
 
-Disk I/O differences
+# Refresh whitelist after new Docker containers
+sudo /usr/local/bin/fail2ban-update-whitelist.sh
 
-AWS throttling
+# View banned IPs
+cat /var/log/fail2ban-banned-ips.log
 
-🔥 FOR YOUR SYSTEM (VERY IMPORTANT)
+# Restart Fail2Ban
+sudo systemctl restart fail2ban
+```
 
-Since you're building:
+---
 
-Call center
-
-23,000 tenants
-
-Real-time calls
-
-👉 This setup lets you test:
-
-API bottlenecks
-
-Redis overload
-
-Queue delays
-
-Scaling limits
-
-🚀 If you want next level (seriously powerful)
-
-I can extend this into:
-
-✅ WebSocket cluster (real-time calls like Grab)
-✅ Redis pub/sub simulation
-✅ Kafka-style event system
-✅ Failure simulation (kill container randomly)
-✅ CI/CD auto deploy (like AWS)
+🎉 **Congratulations! Dynamic Fail2Ban is now fully set up.**
