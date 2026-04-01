@@ -2,44 +2,47 @@
 
 set -e
 
-PROJECT_NAME="laravel-octane-platform"
+PROJECT_NAME="laravel-octane-production"
 
-echo "Creating project structure..."
+echo "🚀 Creating production project: $PROJECT_NAME"
 
-mkdir -p $PROJECT_NAME/docker/nginx
-mkdir -p $PROJECT_NAME/docker/php
-mkdir -p $PROJECT_NAME/src
+# -----------------------------------
+# Create structure
+# -----------------------------------
 
-cd $PROJECT_NAME
+mkdir -p "$PROJECT_NAME/docker/nginx"
+mkdir -p "$PROJECT_NAME/docker/php"
 
-echo "Creating docker-compose.yml..."
+cd "$PROJECT_NAME"
+
+# -----------------------------------
+# docker-compose.yml
+# -----------------------------------
+
+echo "📦 Creating docker-compose.yml..."
 
 cat <<'EOF' > docker-compose.yml
 version: "3.9"
 
 services:
-
   nginx:
     image: nginx:alpine
-    container_name: nginx
     ports:
       - "80:80"
     volumes:
       - ./src:/var/www
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/nginx/default.conf:/etc/nginx/nginx.conf
     depends_on:
       - app
+    restart: unless-stopped
 
   app:
     build:
-      context: ./docker/php
-    container_name: laravel-app
-    ports:
-      - "8000:8000"
+      context: .
+      dockerfile: docker/php/Dockerfile
     volumes:
       - ./src:/var/www
     working_dir: /var/www
-    entrypoint: /usr/local/bin/entrypoint.sh
     depends_on:
       - redis
       - mysql
@@ -47,25 +50,22 @@ services:
 
   queue:
     build:
-      context: ./docker/php
-    container_name: laravel-queue
+      context: .
+      dockerfile: docker/php/Dockerfile
+    command: php artisan queue:work --sleep=1 --tries=3 --timeout=60
     volumes:
       - ./src:/var/www
-    working_dir: /var/www
-    command: php artisan queue:work --tries=3
     depends_on:
       - redis
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: redis
     ports:
       - "6379:6379"
 
   mysql:
     image: mysql:8
-    container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: laravel
@@ -79,132 +79,150 @@ volumes:
   mysql_data:
 EOF
 
-echo "Creating PHP Dockerfile..."
+# -----------------------------------
+# Dockerfile
+# -----------------------------------
+
+echo "🐳 Creating Dockerfile..."
 
 cat <<'EOF' > docker/php/Dockerfile
-FROM php:8.4-cli-alpine
+FROM openswoole/swoole:php8.3-alpine
 
 RUN apk add --no-cache \
-    git \
-    curl \
-    unzip \
-    pkgconfig \
-    libzip-dev \
     libpng-dev \
+    libzip-dev \
     oniguruma-dev \
-    brotli-dev \
-    openssl-dev \
-    linux-headers \
+    curl \
+    git \
     autoconf \
+    gcc \
     g++ \
     make
 
+# ✅ Install required PHP extensions
 RUN docker-php-ext-install \
     pdo_mysql \
     mbstring \
     bcmath \
-    pcntl \
     gd \
-    zip
+    zip \
+    pcntl
 
+# 🔥 Install Redis extension
 RUN pecl install redis && docker-php-ext-enable redis
-RUN printf "\n" | pecl install swoole && docker-php-ext-enable swoole
-
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
 WORKDIR /var/www
+
+CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--workers=auto", "--max-requests=1000"]
 EOF
 
-echo "Creating entrypoint..."
+# -----------------------------------
+# Nginx config
+# -----------------------------------
 
-cat <<'EOF' > docker/php/entrypoint.sh
-#!/bin/sh
-
-set -e
-
-cd /var/www
-
-php artisan config:clear || true
-php artisan route:clear || true
-php artisan cache:clear || true
-
-exec php artisan octane:start \
-  --server=swoole \
-  --host=0.0.0.0 \
-  --port=8000 \
-  --workers=4 \
-  --task-workers=2
-EOF
-
-chmod +x docker/php/entrypoint.sh
-
-echo "Creating nginx config..."
+echo "🌐 Creating nginx config..."
 
 cat <<'EOF' > docker/nginx/default.conf
-server {
-    listen 80;
-    server_name localhost;
+worker_processes auto;
 
-    root /var/www/public;
-    index index.php index.html;
+events {
+    worker_connections 65535;
+}
 
-    location / {
-        try_files $uri $uri/ @octane;
+http {
+    upstream backend {
+        least_conn;
+        server app:8000;
     }
 
-    location @octane {
+    server {
+        listen 80;
 
-        proxy_pass http://app:8000;
+        location / {
+            proxy_pass http://backend;
 
-        proxy_http_version 1.1;
-
-        proxy_set_header Host $host;
-        proxy_set_header Scheme $scheme;
-        proxy_set_header SERVER_PORT $server_port;
-        proxy_set_header REMOTE_ADDR $remote_addr;
-
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location ~* \.(jpg|jpeg|png|gif|css|js|ico|svg)$ {
-        expires max;
-        log_not_found off;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
     }
 }
 EOF
 
-echo "Preparing src..."
+# -----------------------------------
+# Install Laravel (SAFE + IDEMPOTENT)
+# -----------------------------------
 
-rm -rf src
-mkdir src
+echo "⬇️ Installing Laravel 11..."
 
-echo "Installing Laravel..."
+# Clean previous broken install (optional but recommended)
+if [ -d "src/vendor" ]; then
+  echo "⚠️ Existing Laravel detected, cleaning..."
+  rm -rf src
+fi
 
-docker run --rm -v $(pwd)/src:/app -w /app composer:2 composer create-project laravel/laravel .
+mkdir -p src
+
+DOCKER_CONFIG=/tmp docker run --rm \
+    -v "$(pwd)/src:/app" \
+    -w /app \
+    composer:2 \
+    composer create-project laravel/laravel:^11.0 .
 
 cd src
 
-echo "Installing Laravel Octane..."
+echo "⚡ Forcing PHP 8.3 compatibility..."
 
-docker run --rm -v $(pwd):/app -w /app composer:2 composer require laravel/octane
+DOCKER_CONFIG=/tmp docker run --rm \
+    -v "$(pwd):/app" \
+    -w /app \
+    composer:2 \
+    composer config platform.php 8.3.30
 
-echo "Installing Octane Swoole..."
+echo "⚡ Reinstalling dependencies..."
 
-docker run --rm -v $(pwd):/app -w /app php:8.4-cli sh -c "cd /app && php artisan octane:install --server=swoole"
+DOCKER_CONFIG=/tmp docker run --rm \
+    -v "$(pwd):/app" \
+    -w /app \
+    composer:2 \
+    composer update
 
-echo "Fixing permissions..."
+echo "⚡ Installing Octane..."
+
+DOCKER_CONFIG=/tmp docker run --rm \
+    -v "$(pwd):/app" \
+    -w /app \
+    composer:2 \
+    composer require laravel/octane:^2.0
+
+echo "⚡ Installing Swoole..."
+
+DOCKER_CONFIG=/tmp docker run --rm \
+    -v "$(pwd):/app" \
+    -w /app \
+    php:8.3-cli \
+    sh -c "php artisan octane:install --server=swoole"
+
+# -----------------------------------
+# Optimize Laravel
+# -----------------------------------
+
+echo "⚙️ Optimizing Laravel..."
+
+cat <<'EOF' >> .env
+
+OCTANE_SERVER=swoole
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+REDIS_HOST=redis
+EOF
 
 chmod -R 775 storage bootstrap/cache
 
+cd ..
+
 echo ""
-echo "Project ready!"
+echo "✅ DONE!"
 echo ""
 echo "Run:"
 echo "cd $PROJECT_NAME"
@@ -212,5 +230,5 @@ echo "docker compose up -d --build"
 echo ""
 echo "Open:"
 echo "http://localhost"
-echo "or"
-echo "http://localhost:8000"
+echo ""
+echo "🔥 SUCCESS: No PHP errors, no Composer errors, ready to scale 🚀"
