@@ -25,29 +25,11 @@ class DynamicScraper:
         self.seen_urls = set()
 
     def init_browser(self):
-        if self.driver:
-            return
-
+        if self.driver: return
         self.log("[BROWSER] 🛠 Starting Chrome...")
-
         options = uc.ChromeOptions()
-        options.add_argument("--headless=new")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
+        self.driver = uc.Chrome(options=options)
 
-        try:
-            # ✅ AUTO MATCH Chrome version
-            self.driver = uc.Chrome(
-                options=options,
-                version_main=146,  # 🔥 IMPORTANT: match your Chrome version
-                use_subprocess=True
-            )
-        except Exception as e:
-            self.log(f"[ERROR] ❌ Browser failed: {e}")
-            raise
-        
     def sync_session(self):
         self.log("[SESSION] 🔄 Syncing cookies...")
         for cookie in self.driver.get_cookies():
@@ -102,27 +84,9 @@ class DynamicScraper:
 
         for page in range(1, 51):
             self.log(f"[PAGE] 📄 Loading page {page}...")
-
             connector = "&" if "?" in task['url'] else "?"
-            full_url = f"{task['url']}{connector}p={page}"  # ✅ FIXED
-
-            self.log(f"[DEBUG] 🌐 URL = {full_url}")
-
-            if not full_url.startswith("http"):
-                self.log(f"[ERROR] ❌ Invalid URL: {full_url}")
-                return
-
-            try:
-                self.driver.set_page_load_timeout(30)
-                self.driver.get(full_url)
-                time.sleep(3)
-
-                self.log(f"[DEBUG] Page title: {self.driver.title}")
-                self.log(f"[DEBUG] HTML size: {len(self.driver.page_source)}")
-
-            except Exception as e:
-                self.log(f"[ERROR] ❌ Page load failed: {e}")
-                continue
+            self.driver.get(f"{task['url']}{connector}page={page}")
+            time.sleep(5)
             
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
             
