@@ -40,6 +40,8 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      cpus: 1.0
+      mem_limit: 1g
     volumes:
       - ./src:/var/www
     working_dir: /var/www

@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  app:
+    image: laravel-octane-production-app
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+
+  queue:
+    image: laravel-octane-production-queue
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+
+  redis:
+    image: redis:7-alpine
+    deploy:
+      replicas: 1
