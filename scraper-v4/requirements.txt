@@ -1,0 +1,6 @@
+flask
+redis
+selenium
+beautifulsoup4
+requests
+undetected-chromedriver

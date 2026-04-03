@@ -1,13 +1,1 @@
-[
-  {
-    "name": "Mynavi",
-    "url": "https://job.mynavi.jp/27/pc/search/query.html?OP:1/",
-    "link_css": "div.boxSearchresultEach h3.withCheck a[href]",
-    "prefix": "https://job.mynavi.jp",
-    "title": "",
-    "company": "",
-    "address": "",
-    "sheet_id": "14OHoOhmtEgTA8U3Y0aQexUm2AtzlHQ8m44SVh0bfnwg",
-    "tab": "Mynavi_Data"
-  }
-]
+[]

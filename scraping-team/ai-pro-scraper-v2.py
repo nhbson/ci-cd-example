@@ -18,54 +18,119 @@ from oauth2client.service_account import ServiceAccountCredentials
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 
-# Suppress insecure request warnings from verify=False
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SERVICE_ACCOUNT_FILE = "service-account.json"
 CACHE_FILE = "cache.json"
 
-# ================= LEVEL 5 CORE =================
+# ================= LEVEL 6 CORE =================
 class SmartFetcher:
     def __init__(self, log):
         self.log = log
         self.session = requests.Session()
+        self.driver = None
+
+    def init_browser(self):
+        if self.driver:
+            return self.driver
+
+        try:
+            options = uc.ChromeOptions()
+            options.add_argument("--start-maximized")
+            options.add_argument("--disable-blink-features=AutomationControlled")
+
+            self.driver = uc.Chrome(options=options, version_main=146)
+            self.log("[BROWSER] Chrome launched")
+
+        except Exception as e:
+            self.log(f"[ERROR] Browser init: {e}")
+
+        return self.driver
+
+    def is_blocked(self, res):
+        if not res:
+            return True
+        if res.status_code == 403:
+            return True
+        if "Request blocked" in res.text or "cloudfront" in res.text.lower():
+            return True
+        return False
+    
+    def get_proxy(self):
+        proxies = [
+            "http://user:pass@proxy1:port",
+            "http://user:pass@proxy2:port",
+        ]
+        return {"http": random.choice(proxies), "https": random.choice(proxies)}
+
+    def fetch_requests(self, url):
+        try:
+
+            res = self.session.get(
+                url,
+                headers=...,
+                proxies=self.get_proxy(),
+                timeout=15,
+                verify=False
+            )
+
+            # res = self.session.get(
+            #     url,
+            #     timeout=15,
+            #     headers={
+            #         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+            #         "Accept-Language": "ja,en-US;q=0.9",
+            #         "Referer": "https://www.google.com/"
+            #     },
+            #     verify=False
+            # )
+
+            res.encoding = res.apparent_encoding
+            return res
+
+        except Exception as e:
+            self.log(f"[ERROR] Requests: {e}")
+            return None
+
+    def fetch_browser(self, url):
+        try:
+            driver = self.init_browser()
+            driver.get(url)
+            time.sleep(random.uniform(2, 4))
+            return driver.page_source
+
+        except Exception as e:
+            self.log(f"[ERROR] Browser fetch: {e}")
+            return None
 
     def fetch(self, url):
-        try:
-            # Added verify=False to fix SSL errors and added realistic headers
-            res = self.session.get(url, timeout=15, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-                "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-            }, verify=False)
-            
-            if res.status_code == 200:
-                # Fix for Japanese characters
-                res.encoding = res.apparent_encoding
-                return res
-        except Exception as e:
-            self.log(f"[ERROR] Fetch {url}: {e}")
-        return None
+        self.log(f"[FETCH] {url}")
+
+        res = self.fetch_requests(url)
+
+        if not self.is_blocked(res):
+            self.log("[OK] requests success")
+            return res.text
+
+        self.log("[BYPASS] Switching to browser...")
+        return self.fetch_browser(url)
 
 
+# ================= AI SELECTOR =================
 class AISelector:
     def extract(self, soup, keywords):
-        # CLEANUP: Remove script and style elements so we don't scrape JS code
         for script_or_style in soup(["script", "style", "header", "footer", "nav", "noscript"]):
             script_or_style.decompose()
 
-        # Target specific tags to avoid capturing large blocks of irrelevant text
         potential_tags = ["td", "th", "p", "span", "div", "h1", "h2", "dt", "dd"]
 
         for kw in keywords:
-            # Search for the keyword in visible text
             el = soup.find(potential_tags, string=lambda t: t and kw.lower() in t.lower())
             if el:
-                # Get the text, clean it, and ensure it's not a massive block of code
                 val = el.get_text(strip=True)
                 if 2 < len(val) < 200:
                     return val
 
-        # Fallback to Title/H1
         for tag in ["h1", "title"]:
             el = soup.find(tag)
             if el:
@@ -87,6 +152,7 @@ def extract_links(base_url, soup):
     return list(links)
 
 
+# ================= SCRAPER =================
 class Level5Scraper:
     def __init__(self, log):
         self.log = log
@@ -95,16 +161,16 @@ class Level5Scraper:
         self.seen = set()
 
     def scrape(self, url):
-        res = self.fetcher.fetch(url)
-        if not res:
+        html = self.fetcher.fetch(url)
+        if not html:
             return []
 
-        soup = BeautifulSoup(res.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
         links = extract_links(url, soup)
+
         self.log(f"[LINKS FOUND] {len(links)}")
 
         results = []
-        # Limit to 20 links per task to prevent long hangs
         with ThreadPoolExecutor(max_workers=5) as ex:
             futures = [ex.submit(self.scrape_detail, l) for l in links[:20]]
             for f in as_completed(futures):
@@ -118,18 +184,16 @@ class Level5Scraper:
         if url in self.seen:
             return None
 
-        res = self.fetcher.fetch(url)
-        if not res:
+        html = self.fetcher.fetch(url)
+        if not html:
             return None
 
-        soup = BeautifulSoup(res.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
 
-        # Specific Japanese keywords added for better extraction on Mynavi
         title = self.ai.extract(soup, ["title", "job", "職種", "求人"])
         company = self.ai.extract(soup, ["company", "会社名", "企業名", "商号"])
         address = self.ai.extract(soup, ["address", "所在地", "住所", "アクセス"])
 
-        # String Cleanup: Remove newlines, tabs, and excess spaces for GSheets compatibility
         def clean_str(s):
             return " ".join(str(s).split())
 
@@ -137,9 +201,8 @@ class Level5Scraper:
         company = clean_str(company)
         address = clean_str(address)
 
-        # Safety check: If company name looks like code, ignore it
-        if "{" in company or "function" in company or "dataLayer" in company:
-            company = "N/A (Script Block)"
+        if "{" in company or "function" in company:
+            company = "N/A"
 
         self.seen.add(url)
         self.log(f"[DETAIL] {company[:40]}...")
@@ -179,7 +242,8 @@ class DevToolsWindow(tk.Toplevel):
 
             options = uc.ChromeOptions()
             options.add_argument("--start-maximized")
-            self.driver = uc.Chrome(options=options)
+
+            self.driver = uc.Chrome(options=options, version_main=146)
             self.driver.get(self.url_entry.get())
 
         except Exception as e:
@@ -201,7 +265,7 @@ class DevToolsWindow(tk.Toplevel):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("🔥 AI Scraper Level 5 (Fixed)")
+        self.title("🔥 AI Scraper Level 5 (Upgraded Engine)")
         self.geometry("1100x800")
 
         self.tasks = self.load_tasks()
@@ -252,7 +316,7 @@ class App(tk.Tk):
     def add_task(self):
         task = {k: v.get() for k, v in self.entries.items()}
         if not task["name"] or not task["url"] or not task["sheet_id"]:
-            messagebox.showwarning("Warning", "Fill in Name, URL, and Sheet ID")
+            messagebox.showwarning("Warning", "Fill Name, URL, Sheet ID")
             return
         self.tasks.append(task)
         self.save_tasks()
@@ -260,16 +324,18 @@ class App(tk.Tk):
 
     def delete_task(self):
         selected = self.tree.selection()
-        if not selected: return
+        if not selected:
+            return
         index = self.tree.index(selected[0])
-        if messagebox.askyesno("Confirm", "Delete selected task?"):
-            self.tasks.pop(index)
-            self.save_tasks()
-            self.refresh()
+        self.tasks.pop(index)
+        self.save_tasks()
+        self.refresh()
 
     def refresh(self):
-        for i in self.tree.get_children(): self.tree.delete(i)
-        for t in self.tasks: self.tree.insert("", "end", values=(t["name"], t["url"]))
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+        for t in self.tasks:
+            self.tree.insert("", "end", values=(t["name"], t["url"]))
 
     def save_tasks(self):
         with open("training_config.json", "w", encoding="utf-8") as f:
@@ -287,34 +353,26 @@ class App(tk.Tk):
     def run_engine(self):
         try:
             scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-            if not os.path.exists(SERVICE_ACCOUNT_FILE):
-                self.log(f"[ERROR] {SERVICE_ACCOUNT_FILE} not found!")
-                return
 
             creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
             gc = gspread.authorize(creds)
+
             scraper = Level5Scraper(self.log)
 
             for task in self.tasks:
-                self.log(f"\n[TASK] Starting: {task['name']}")
+                self.log(f"\n[TASK] {task['name']}")
                 results = scraper.scrape(task["url"])
 
                 if results:
-                    try:
-                        sh = gc.open_by_key(task["sheet_id"])
-                        ws = sh.worksheet(task["tab"])
-                        ws.append_rows(results)
-                        self.log(f"[SUCCESS] Uploaded {len(results)} rows to {task['name']}")
-                    except Exception as sheet_err:
-                        self.log(f"[ERROR] Google Sheet Sync: {sheet_err}")
-                else:
-                    self.log(f"[INFO] No valid data extracted for {task['name']}")
+                    sh = gc.open_by_key(task["sheet_id"])
+                    ws = sh.worksheet(task["tab"])
+                    ws.append_rows(results)
+                    self.log(f"[SUCCESS] {len(results)} rows uploaded")
 
-            self.log("\n[FINISHED] All tasks completed.")
-            messagebox.showinfo("Done", "All tasks completed!")
+            self.log("[FINISHED]")
 
         except Exception as e:
-            self.log(f"[CRITICAL ERROR] {e}")
+            self.log(f"[ERROR] {e}")
 
     def open_devtools(self):
         DevToolsWindow(self, self.log)
