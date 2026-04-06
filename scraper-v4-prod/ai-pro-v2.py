@@ -65,6 +65,7 @@ class DynamicScraper:
         })
         self.seen_urls = set()
         self.load_cache()
+        self.selected_index = None
 
     def load_cache(self):
         if os.path.exists(CACHE_FILE):
@@ -202,12 +203,14 @@ class App(tk.Tk):
         self.create_input(gs_frame, "Tab Name:", "e_tab", 1)
 
         ttk.Button(left_panel, text="ADD TO QUEUE", command=self.add_task).pack(fill="x", pady=10)
-
+        self.mode_label = tk.Label(left_panel, text="Mode: ADD", fg=COLORS["accent"], bg=COLORS["bg_dark"])
+        self.mode_label.pack()
         # RIGHT PANEL
         right_panel = ttk.Frame(container)
         right_panel.pack(side="right", fill="both", expand=True, padx=(20, 0))
 
         self.tree = ttk.Treeview(right_panel, columns=("Name", "Fields"), show="headings", height=8)
+        self.tree.bind("<<TreeviewSelect>>", self.on_task_select)
         self.tree.heading("Name", text="TASK NAME")
         self.tree.heading("Fields", text="FIELD COUNT")
         self.tree.pack(fill="x", pady=(0, 10))
@@ -229,30 +232,65 @@ class App(tk.Tk):
         
         self.refresh_table()
 
+    def on_task_select(self, event):
+        selected = self.tree.selection()
+        if not selected:
+            return
+
+        index = self.tree.index(selected[0])
+        task = self.tasks[index]
+
+        self.selected_index = index
+
+        # Fill inputs
+        self.e_name.delete(0, tk.END)
+        self.e_name.insert(0, task.get("name", ""))
+
+        self.e_url.delete(0, tk.END)
+        self.e_url.insert(0, task.get("url", ""))
+
+        self.e_s_link.delete(0, tk.END)
+        self.e_s_link.insert(0, task.get("s_link", ""))
+
+        self.e_prefix.delete(0, tk.END)
+        self.e_prefix.insert(0, task.get("prefix", ""))
+
+        self.e_sid.delete(0, tk.END)
+        self.e_sid.insert(0, task.get("sheet_id", ""))
+
+        self.e_tab.delete(0, tk.END)
+        self.e_tab.insert(0, task.get("tab", ""))
+
+        # Load fields
+        self.dynamic_fields = task.get("fields", {}).copy()
+
+        self.fields_display.delete("1.0", tk.END)
+        for name, selector in self.dynamic_fields.items():
+            self.fields_display.insert(tk.END, f" ✔ {name}: {selector}\n")
+
+        self.mode_label.config(text="Mode: EDIT")
+
+        self.log(f"✏️ Loaded task for editing: {task['name']}", "info")
+        
     def remove_task(self):
         selected = self.tree.selection()
-        
+
         if not selected:
             messagebox.showwarning("Warning", "Please select a task to remove.")
             return
 
-        # Get selected index
         index = self.tree.index(selected[0])
-
         task_name = self.tasks[index]['name']
 
-        confirm = messagebox.askyesno(
-            "Confirm",
-            f"Are you sure you want to delete task:\n{task_name}?"
-        )
+        confirm = messagebox.askyesno("Confirm", f"Delete task:\n{task_name}?")
 
         if confirm:
-            # Remove from list
             self.tasks.pop(index)
-
-            # Save & refresh UI
             self.save_tasks()
             self.refresh_table()
+
+            self.selected_index = None
+            self.mode_label.config(text="Mode: ADD")
 
             self.log(f"🗑 Task removed: {task_name}", "info")
             
@@ -274,18 +312,44 @@ class App(tk.Tk):
 
     def add_task(self):
         task = {
-            "name": self.e_name.get(), "url": self.e_url.get(), "s_link": self.e_s_link.get(),
-            "prefix": self.e_prefix.get(), "fields": self.dynamic_fields.copy(),
-            "sheet_id": self.e_sid.get(), "tab": self.e_tab.get(),
+            "name": self.e_name.get(),
+            "url": self.e_url.get(),
+            "s_link": self.e_s_link.get(),
+            "prefix": self.e_prefix.get(),
+            "fields": self.dynamic_fields.copy(),
+            "sheet_id": self.e_sid.get(),
+            "tab": self.e_tab.get(),
         }
+
         if not task["name"] or not task["fields"]:
             messagebox.showerror("Error", "Task Name and Fields are required.")
             return
-        self.tasks.append(task)
+
+        # UPDATE MODE
+        if self.selected_index is not None:
+            self.tasks[self.selected_index] = task
+            self.log(f"🔄 Task updated: {task['name']}", "success")
+            self.selected_index = None
+        else:
+            # ADD MODE
+            self.tasks.append(task)
+            self.log(f"➕ Task added: {task['name']}", "success")
+
         self.save_tasks()
         self.refresh_table()
+
+        # Reset UI
         self.dynamic_fields = {}
         self.fields_display.delete("1.0", tk.END)
+
+        self.e_name.delete(0, tk.END)
+        self.e_url.delete(0, tk.END)
+        self.e_s_link.delete(0, tk.END)
+        self.e_prefix.delete(0, tk.END)
+        self.e_sid.delete(0, tk.END)
+        self.e_tab.delete(0, tk.END)
+
+        self.mode_label.config(text="Mode: ADD")
 
     def log(self, msg, tag="info"):
         self.log_box.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] {msg}\n", tag)
