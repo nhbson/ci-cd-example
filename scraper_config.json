@@ -1,15 +1,13 @@
 [
   {
-    "name": "BIZREACH",
+    "name": "BIZREACH-AI",
     "url": "https://www.bizreach.jp/job/j/JG004/IG002/",
     "s_link": "#jsi-job-cassettes a.jsc-detail-trigger",
-    "prefix": "https://www.bizreach.jp",
-    "fields": {
-      "\u4f01\u696d\u540d": ".pg-job-company-info-detail li:first-child a",
-      "\u672c\u793e\u6240\u5728\u5730": ".pg-headhunter-icon-location",
-      "\u4f1a\u793e\u898f\u6a21": ".pg-job-detail-company-capital"
-    },
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "BIZREACH"
+    "stats_sel": ".sg-pager-display",
+    "page_key": "",
+    "total_idx": "2",
+    "fields": {},
+    "sheet_id": "",
+    "tab": ""
   }
 ]

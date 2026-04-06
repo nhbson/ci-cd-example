@@ -3,57 +3,31 @@ import json
 import random
 import time
 import threading
-import csv
+import re
+import math
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse, urljoin
 
 import gspread
 import requests
 from bs4 import BeautifulSoup
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Constants
+# ================= CONFIG =================
 SERVICE_ACCOUNT_FILE = "service-account.json"
-CACHE_FILE = "cache.json"
 CONFIG_FILE = "scraper_config.json"
 
-# ================= MODERN THEME COLORS =================
+# ================= UI COLORS =================
 COLORS = {
-    "bg_dark": "#1e1e1e",
-    "bg_panel": "#252526",
-    "bg_input": "#3c3c3c",
-    "fg_main": "#cccccc",
-    "accent": "#007acc",
-    "success": "#4ec9b0",
-    "warning": "#dcdcaa",
-    "error": "#f44747",
-    "selection": "#264f78"
+    "bg": "#f5f6fa",
+    "panel": "#ffffff",
+    "fg": "#2d3436",
+    "accent": "#0984e3",
+    "success": "#00b894",
+    "error": "#d63031"
 }
-
-def apply_style(root):
-    style = ttk.Style()
-    style.theme_use('clam')
-    
-    root.configure(bg=COLORS["bg_dark"])
-    
-    style.configure("TFrame", background=COLORS["bg_dark"])
-    style.configure("TLabel", background=COLORS["bg_dark"], foreground=COLORS["fg_main"], font=("Segoe UI", 10))
-    
-    style.configure("TLabelframe", background=COLORS["bg_dark"], foreground=COLORS["accent"], bordercolor=COLORS["bg_input"])
-    style.configure("TLabelframe.Label", background=COLORS["bg_dark"], foreground=COLORS["accent"], font=("Segoe UI", 10, "bold"))
-    
-    style.configure("TButton", font=("Segoe UI", 10, "bold"), padding=6, background=COLORS["bg_input"], foreground="white")
-    style.map("TButton", background=[('active', COLORS["accent"]), ('pressed', COLORS["selection"])])
-    
-    style.configure("Treeview", 
-                    background=COLORS["bg_panel"], 
-                    foreground=COLORS["fg_main"], 
-                    fieldbackground=COLORS["bg_panel"], 
-                    rowheight=30,
-                    borderwidth=0)
-    style.map("Treeview", background=[('selected', COLORS["selection"])])
-    style.configure("Treeview.Heading", background=COLORS["bg_input"], foreground="white", font=("Segoe UI", 10, "bold"), borderwidth=0)
 
 # ================= SCRAPER ENGINE =================
 class DynamicScraper:
@@ -61,327 +35,307 @@ class DynamicScraper:
         self.log = log_func
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         })
         self.seen_urls = set()
-        self.load_cache()
-        self.selected_index = None
-
-    def load_cache(self):
-        if os.path.exists(CACHE_FILE):
-            try:
-                with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                    self.seen_urls = set(json.load(f))
-            except: self.seen_urls = set()
-
-    def save_cache(self):
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(list(self.seen_urls), f)
 
     def safe_get(self, url):
         try:
-            res = self.session.get(url, timeout=15)
-            return res if res.status_code == 200 else None
+            r = self.session.get(url, timeout=15)
+            return r if r.status_code == 200 else None
         except:
             return None
 
     def fetch_detail(self, url, fields):
-        if url in self.seen_urls:
-            return None
-        time.sleep(random.uniform(0.5, 1.2))
+        if url in self.seen_urls: return None
+        time.sleep(random.uniform(0.5, 1.0))
+        
         res = self.safe_get(url)
         if not res: return None
+        
         soup = BeautifulSoup(res.text, "html.parser")
         data = {"URL": url}
-        for field_name, selector in fields.items():
-            el = soup.select_one(selector) if selector else None
-            data[field_name] = el.get_text(" ", strip=True) if el else "N/A"
+        for k, sel in fields.items():
+            el = soup.select_one(sel)
+            data[k] = el.get_text(strip=True) if el else "N/A"
+        
         self.seen_urls.add(url)
-        self.log(f"FETCHED: {url[:60]}...", "success")
         return data
 
-    def process_task(self, task, gc):
-        self.log(f"🚀 Starting Task: {task['name']}", "info")
-        try:
-            sh = gc.open_by_key(task['sheet_id'])
-            ws = sh.worksheet(task['tab'])
-        except:
-            sh = gc.open_by_key(task['sheet_id'])
-            ws = sh.add_worksheet(title=task['tab'], rows="1000", cols="20")
-            headers = ["URL"] + list(task['fields'].keys())
-            ws.append_row(headers)
+    def process_task(self, task, gc, stop_check):
+        self.log(f"🚀 Starting: {task['name']}")
+        
+        # 1. Fetch Page 1 to calculate total pages
+        base_url = task['url']
+        res = self.safe_get(base_url)
+        if not res:
+            self.log("❌ Failed to load initial page", "error")
+            return
 
-        url = task['url']
-        page = 1
-        while url and page <= 50:
-            res = self.safe_get(url)
-            if not res: break
-            soup = BeautifulSoup(res.text, "html.parser")
-            links = []
-            for a in soup.select(task['s_link']):
-                href = a.get("href")
-                if href:
-                    if href.startswith("/") and task['prefix']:
-                        href = task['prefix'].rstrip("/") + href
-                    links.append(href.split("?")[0])
-            links = list(set(links))
-            self.log(f"Page {page}: Found {len(links)} links", "info")
+        soup = BeautifulSoup(res.text, "html.parser")
+        
+        # 2. Auto-Calculate Total Pages
+        total_pages = 1
+        items_per_page = 20
+        stats_sel = task.get('stats_sel', '.sg-pager-display')
+        stats_el = soup.select_one(stats_sel)
+
+        if stats_el:
+            text = stats_el.get_text(strip=True) # "1件～20件（全3187件中）"
+            nums = re.findall(r'\d+', text)
+            if len(nums) >= 3:
+                start_idx = int(nums[0])
+                end_idx = int(nums[1])
+                total_items = int(nums[2])
+                
+                items_per_page = (end_idx - start_idx) + 1
+                total_pages = math.ceil(total_items / items_per_page)
+                self.log(f"📊 Detected: {total_items} items total. Calculation: {total_pages} pages.")
+            else:
+                self.log("⚠️ Could not parse paging numbers. Defaulting to 1 page.", "error")
+
+        # Limit by user settings
+        max_user_pages = int(task.get('max_pages', 10))
+        final_page_count = min(total_pages, max_user_pages)
+
+        # 3. Iterate through pages
+        for p in range(1, final_page_count + 1):
+            if stop_check(): break
+            
+            # Build URL for current page (e.g. site.com?p=2)
+            u = urlparse(base_url)
+            query = parse_qs(u.query)
+            query[task.get('page_param', 'p')] = [str(p)]
+            new_query = urlencode(query, doseq=True)
+            current_page_url = urlunparse((u.scheme, u.netloc, u.path, u.params, new_query, u.fragment))
+
+            self.log(f"📄 Page {p}/{final_page_count}: {current_page_url}")
+            
+            # Fetch page content (already have page 1)
+            if p > 1:
+                res = self.safe_get(current_page_url)
+                if not res: break
+                soup = BeautifulSoup(res.text, "html.parser")
+
+            # 4. Extract detail links
+            links = [urljoin(current_page_url, a.get("href")) 
+                     for a in soup.select(task['s_link']) if a.get("href")]
+
+            # 5. Fetch details in parallel
             results = []
             with ThreadPoolExecutor(max_workers=5) as ex:
                 futures = [ex.submit(self.fetch_detail, l, task['fields']) for l in links]
                 for f in as_completed(futures):
+                    if stop_check(): break
                     r = f.result()
                     if r: results.append(r)
-            if results:
-                headers = ["URL"] + list(task['fields'].keys())
-                rows_to_upload = [[res.get(h, "N/A") for h in headers] for res in results]
-                ws.append_rows(rows_to_upload)
-            next_btn = soup.select_one("a[rel=next], .next")
-            if next_btn and page < 50:
-                url = next_btn.get("href")
-                if url.startswith("/") and task['prefix']:
-                    url = task['prefix'].rstrip("/") + url
-                page += 1
-            else: url = None
-        self.save_cache()
-        self.log(f"✅ Task {task['name']} Finished.", "success")
 
-# ================= MODERN UI =================
+            # 6. Save to Google Sheets
+            if results:
+                try:
+                    sh = gc.open_by_key(task['sheet_id'])
+                    try:
+                        ws = sh.worksheet(task['tab'])
+                    except:
+                        ws = sh.add_worksheet(title=task['tab'], rows="1000", cols="20")
+                    
+                    headers = ["URL"] + list(task['fields'].keys())
+                    rows = [[r.get(h, "") for h in headers] for r in results]
+                    ws.append_rows(rows)
+                    self.log(f"✅ Saved {len(results)} items from page {p}", "success")
+                except Exception as e:
+                    self.log(f"❌ Google Sheets Error: {e}", "error")
+
+# ================= UI APPLICATION =================
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("AI DYNAMIC SCRAPER PRO")
-        self.geometry("1200x850")
-        apply_style(self)
+        self.title("SCRAPER PRO v2 (AUTO-PAGING)")
+        self.geometry("1200x900")
+        self.configure(bg=COLORS["bg"])
+        
         self.tasks = self.load_tasks()
-        self.dynamic_fields = {} 
+        self.dynamic_fields = {}
+        self.selected_task_index = None
+        self.running = False
+        self.stop_flag = False
+        
         self.setup_ui()
+        self.refresh_tasks_list()
 
     def setup_ui(self):
-        header = tk.Frame(self, bg=COLORS["bg_panel"], height=60)
-        header.pack(fill="x", side="top")
-        tk.Label(header, text="DASHBOARD // DYNAMIC SCRAPER", font=("Segoe UI", 14, "bold"), bg=COLORS["bg_panel"], fg=COLORS["accent"]).pack(pady=15, padx=20, side="left")
+        style = ttk.Style()
+        style.theme_use('clam')
 
-        container = ttk.Frame(self)
-        container.pack(fill="both", expand=True, padx=20, pady=10)
-
-        # FIX: Define width in Frame, remove from .pack()
-        left_panel = ttk.Frame(container, width=400)
-        left_panel.pack(side="left", fill="y", expand=False)
-        left_panel.pack_propagate(False) # Ensures the frame keeps its 400px width
-
-        config_frame = ttk.LabelFrame(left_panel, text=" 1. CONFIGURATION ", padding=15)
-        config_frame.pack(fill="x", pady=(0, 10))
-
-        self.create_input(config_frame, "Task Name:", "e_name", 0)
-        self.create_input(config_frame, "Base URL:", "e_url", 1)
-        self.create_input(config_frame, "List Item CSS:", "e_s_link", 2)
-        self.create_input(config_frame, "URL Prefix:", "e_prefix", 3)
-
-        fields_frame = ttk.LabelFrame(left_panel, text=" 2. SELECTORS ", padding=15)
-        fields_frame.pack(fill="x", pady=10)
-
-        field_input_row = ttk.Frame(fields_frame)
-        field_input_row.pack(fill="x")
+        main = ttk.Frame(self)
+        main.pack(fill="both", expand=True, padx=20, pady=20)
         
-        self.f_name = tk.Entry(field_input_row, bg=COLORS["bg_input"], fg="white", insertbackground="white", borderwidth=0, font=("Segoe UI", 10))
-        self.f_name.insert(0, "Title")
-        self.f_name.pack(side="left", padx=2, ipady=4, expand=True, fill="x")
+        # --- LEFT: CONFIGURATION ---
+        left = ttk.Frame(main, width=450)
+        left.pack(side="left", fill="y", padx=10)
+
+        ttk.Label(left, text="Saved Tasks", font=("Arial", 10, "bold")).pack(anchor="w")
+        self.task_list = tk.Listbox(left, height=6, bg="#ffffff", bd=1)
+        self.task_list.pack(fill="x", pady=5)
+        self.task_list.bind("<<ListboxSelect>>", self.on_select_task)
+
+        # Basic Fields
+        self.e_name = self.entry(left, "Task Name (Identifier)")
+        self.e_url = self.entry(left, "Initial URL (Page 1)")
+        self.e_link = self.entry(left, "Job Link Selector (e.g. .job-card a)")
         
-        self.f_selector = tk.Entry(field_input_row, bg=COLORS["bg_input"], fg="white", insertbackground="white", borderwidth=0, font=("Segoe UI", 10))
-        self.f_selector.insert(0, "h1.product-title")
-        self.f_selector.pack(side="left", padx=2, ipady=4, expand=True, fill="x")
-
-        ttk.Button(field_input_row, text="+", width=3, command=self.add_field_to_list).pack(side="left", padx=5)
-
-        self.fields_display = tk.Text(fields_frame, height=5, bg="#111", fg=COLORS["success"], font=("Consolas", 10), borderwidth=0)
-        self.fields_display.pack(fill="x", pady=5)
-
-        gs_frame = ttk.LabelFrame(left_panel, text=" 3. GOOGLE SHEETS ", padding=15)
-        gs_frame.pack(fill="x", pady=10)
-        self.create_input(gs_frame, "Sheet ID:", "e_sid", 0)
-        self.create_input(gs_frame, "Tab Name:", "e_tab", 1)
-
-        ttk.Button(left_panel, text="ADD TO QUEUE", command=self.add_task).pack(fill="x", pady=10)
-        self.mode_label = tk.Label(left_panel, text="Mode: ADD", fg=COLORS["accent"], bg=COLORS["bg_dark"])
-        self.mode_label.pack()
-        # RIGHT PANEL
-        right_panel = ttk.Frame(container)
-        right_panel.pack(side="right", fill="both", expand=True, padx=(20, 0))
-
-        self.tree = ttk.Treeview(right_panel, columns=("Name", "Fields"), show="headings", height=8)
-        self.tree.bind("<<TreeviewSelect>>", self.on_task_select)
-        self.tree.heading("Name", text="TASK NAME")
-        self.tree.heading("Fields", text="FIELD COUNT")
-        self.tree.pack(fill="x", pady=(0, 10))
+        # Paging Logic Frame
+        p_frame = ttk.LabelFrame(left, text="Auto-Paging Calculation")
+        p_frame.pack(fill="x", pady=10, padx=2)
         
-        self.tree.tag_configure('odd', background=COLORS["bg_dark"])
-        self.tree.tag_configure('even', background=COLORS["bg_panel"])
+        ttk.Label(p_frame, text="Stats Selector (e.g. .sg-pager-display)").pack(anchor="w", padx=5)
+        self.e_stats_sel = tk.Entry(p_frame)
+        self.e_stats_sel.pack(fill="x", padx=5, pady=2)
+        self.e_stats_sel.insert(0, ".sg-pager-display")
 
-        btn_row = ttk.Frame(right_panel)
-        btn_row.pack(fill="x", pady=5)
-        ttk.Button(btn_row, text="▶ START ALL TASKS", command=self.start_thread).pack(side="left", fill="x", expand=True, padx=2)
-        ttk.Button(btn_row, text="CLEAR LOGS", command=lambda: self.log_box.delete("1.0", tk.END)).pack(side="left", padx=2)
-        ttk.Button(btn_row, text="❌ REMOVE TASK", command=self.remove_task).pack(side="left", padx=2)
+        ttk.Label(p_frame, text="Page Param Name (e.g. p or page)").pack(anchor="w", padx=5)
+        self.e_page_param = tk.Entry(p_frame)
+        self.e_page_param.pack(fill="x", padx=5, pady=2)
+        self.e_page_param.insert(0, "p")
 
-        self.log_box = scrolledtext.ScrolledText(right_panel, bg="#111", fg=COLORS["fg_main"], font=("Consolas", 10), borderwidth=0)
-        self.log_box.pack(fill="both", expand=True)
-        self.log_box.tag_config("info", foreground=COLORS["fg_main"])
-        self.log_box.tag_config("success", foreground=COLORS["success"])
-        self.log_box.tag_config("error", foreground=COLORS["error"])
+        ttk.Label(p_frame, text="Max Pages to Scrape (Safety Limit)").pack(anchor="w", padx=5)
+        self.e_max_pages = tk.Entry(p_frame)
+        self.e_max_pages.pack(fill="x", padx=5, pady=2)
+        self.e_max_pages.insert(0, "100")
+
+        # Sheet Fields
+        self.e_sid = self.entry(left, "Google Sheet ID")
+        self.e_tab = self.entry(left, "Tab Name")
+
+        # Selectors
+        sel_box = ttk.LabelFrame(left, text="Data Selectors (Detail Page)")
+        sel_box.pack(fill="x", pady=10)
+        self.f_name = tk.Entry(sel_box); self.f_name.pack(fill="x", padx=5, pady=2)
+        self.f_sel = tk.Entry(sel_box); self.f_sel.pack(fill="x", padx=5, pady=2)
         
-        self.refresh_table()
-
-    def on_task_select(self, event):
-        selected = self.tree.selection()
-        if not selected:
-            return
-
-        index = self.tree.index(selected[0])
-        task = self.tasks[index]
-
-        self.selected_index = index
-
-        # Fill inputs
-        self.e_name.delete(0, tk.END)
-        self.e_name.insert(0, task.get("name", ""))
-
-        self.e_url.delete(0, tk.END)
-        self.e_url.insert(0, task.get("url", ""))
-
-        self.e_s_link.delete(0, tk.END)
-        self.e_s_link.insert(0, task.get("s_link", ""))
-
-        self.e_prefix.delete(0, tk.END)
-        self.e_prefix.insert(0, task.get("prefix", ""))
-
-        self.e_sid.delete(0, tk.END)
-        self.e_sid.insert(0, task.get("sheet_id", ""))
-
-        self.e_tab.delete(0, tk.END)
-        self.e_tab.insert(0, task.get("tab", ""))
-
-        # Load fields
-        self.dynamic_fields = task.get("fields", {}).copy()
-
-        self.fields_display.delete("1.0", tk.END)
-        for name, selector in self.dynamic_fields.items():
-            self.fields_display.insert(tk.END, f" ✔ {name}: {selector}\n")
-
-        self.mode_label.config(text="Mode: EDIT")
-
-        self.log(f"✏️ Loaded task for editing: {task['name']}", "info")
+        f_btn_f = ttk.Frame(sel_box)
+        f_btn_f.pack(fill="x")
+        ttk.Button(f_btn_f, text="Add Field", command=self.add_field).pack(side="left", expand=True, fill="x")
+        ttk.Button(f_btn_f, text="Clear Fields", command=self.clear_fields).pack(side="left", expand=True, fill="x")
         
-    def remove_task(self):
-        selected = self.tree.selection()
+        self.listbox = tk.Listbox(sel_box, height=4)
+        self.listbox.pack(fill="x", padx=5, pady=5)
 
-        if not selected:
-            messagebox.showwarning("Warning", "Please select a task to remove.")
-            return
+        ttk.Button(left, text="SAVE TASK", command=self.save_task).pack(fill="x", pady=5)
+        tk.Button(left, text="DELETE TASK", bg=COLORS["error"], fg="white", command=self.remove_task).pack(fill="x")
 
-        index = self.tree.index(selected[0])
-        task_name = self.tasks[index]['name']
+        # --- RIGHT: LOGGING ---
+        right = ttk.Frame(main)
+        right.pack(side="right", fill="both", expand=True, padx=10)
+        
+        ctrls = ttk.Frame(right)
+        ctrls.pack(fill="x")
+        ttk.Button(ctrls, text="▶ START RUN", command=self.run).pack(side="left", expand=True, fill="x")
+        ttk.Button(ctrls, text="🛑 STOP", command=self.stop).pack(side="left", expand=True, fill="x")
+        
+        self.log_box = scrolledtext.ScrolledText(right, bg="#2d3436", fg="#dfe6e9", font=("Consolas", 10))
+        self.log_box.pack(fill="both", expand=True, pady=10)
 
-        confirm = messagebox.askyesno("Confirm", f"Delete task:\n{task_name}?")
+    # --- UI HELPERS ---
+    def entry(self, parent, label):
+        ttk.Label(parent, text=label).pack(anchor="w")
+        e = tk.Entry(parent); e.pack(fill="x", pady=2); return e
 
-        if confirm:
-            self.tasks.pop(index)
-            self.save_tasks()
-            self.refresh_table()
+    def add_field(self):
+        n, s = self.f_name.get().strip(), self.f_sel.get().strip()
+        if n and s: 
+            self.dynamic_fields[n] = s
+            self.refresh_fields_ui()
+            self.f_name.delete(0, tk.END); self.f_sel.delete(0, tk.END)
 
-            self.selected_index = None
-            self.mode_label.config(text="Mode: ADD")
-
-            self.log(f"🗑 Task removed: {task_name}", "info")
-            
-    def create_input(self, parent, label, var_name, row):
-        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=5)
-        entry = tk.Entry(parent, bg=COLORS["bg_input"], fg="white", insertbackground="white", borderwidth=0, font=("Segoe UI", 10))
-        entry.grid(row=row, column=1, sticky="ew", pady=5, padx=(10, 0), ipady=4)
-        parent.columnconfigure(1, weight=1)
-        setattr(self, var_name, entry)
-
-    def add_field_to_list(self):
-        name = self.f_name.get().strip()
-        sel = self.f_selector.get().strip()
-        if name and sel:
-            self.dynamic_fields[name] = sel
-            self.fields_display.insert(tk.END, f" ✔ {name}: {sel}\n")
-            self.f_name.delete(0, tk.END)
-            self.f_selector.delete(0, tk.END)
-
-    def add_task(self):
-        task = {
-            "name": self.e_name.get(),
-            "url": self.e_url.get(),
-            "s_link": self.e_s_link.get(),
-            "prefix": self.e_prefix.get(),
-            "fields": self.dynamic_fields.copy(),
-            "sheet_id": self.e_sid.get(),
-            "tab": self.e_tab.get(),
-        }
-
-        if not task["name"] or not task["fields"]:
-            messagebox.showerror("Error", "Task Name and Fields are required.")
-            return
-
-        # UPDATE MODE
-        if self.selected_index is not None:
-            self.tasks[self.selected_index] = task
-            self.log(f"🔄 Task updated: {task['name']}", "success")
-            self.selected_index = None
-        else:
-            # ADD MODE
-            self.tasks.append(task)
-            self.log(f"➕ Task added: {task['name']}", "success")
-
-        self.save_tasks()
-        self.refresh_table()
-
-        # Reset UI
+    def clear_fields(self):
         self.dynamic_fields = {}
-        self.fields_display.delete("1.0", tk.END)
+        self.refresh_fields_ui()
 
-        self.e_name.delete(0, tk.END)
-        self.e_url.delete(0, tk.END)
-        self.e_s_link.delete(0, tk.END)
-        self.e_prefix.delete(0, tk.END)
-        self.e_sid.delete(0, tk.END)
-        self.e_tab.delete(0, tk.END)
+    def refresh_fields_ui(self):
+        self.listbox.delete(0, tk.END)
+        for k, v in self.dynamic_fields.items(): self.listbox.insert(tk.END, f"{k}: {v}")
 
-        self.mode_label.config(text="Mode: ADD")
+    def on_select_task(self, event):
+        if not self.task_list.curselection(): return
+        idx = self.task_list.curselection()[0]
+        task = self.tasks[idx]
+        self.selected_task_index = idx
+        
+        self.e_name.delete(0, tk.END); self.e_name.insert(0, task['name'])
+        self.e_url.delete(0, tk.END); self.e_url.insert(0, task['url'])
+        self.e_link.delete(0, tk.END); self.e_link.insert(0, task.get('s_link', ''))
+        self.e_stats_sel.delete(0, tk.END); self.e_stats_sel.insert(0, task.get('stats_sel', '.sg-pager-display'))
+        self.e_page_param.delete(0, tk.END); self.e_page_param.insert(0, task.get('page_param', 'p'))
+        self.e_max_pages.delete(0, tk.END); self.e_max_pages.insert(0, task.get('max_pages', '100'))
+        self.e_sid.delete(0, tk.END); self.e_sid.insert(0, task.get('sheet_id', ''))
+        self.e_tab.delete(0, tk.END); self.e_tab.insert(0, task.get('tab', ''))
+        self.dynamic_fields = task['fields'].copy()
+        self.refresh_fields_ui()
+
+    def save_task(self):
+        name = self.e_name.get().strip()
+        if not name: return messagebox.showwarning("Error", "Task name is required")
+        task = {
+            "name": name,
+            "url": self.e_url.get().strip(),
+            "s_link": self.e_link.get().strip(),
+            "stats_sel": self.e_stats_sel.get().strip(),
+            "page_param": self.e_page_param.get().strip(),
+            "max_pages": self.e_max_pages.get().strip(),
+            "fields": self.dynamic_fields.copy(),
+            "sheet_id": self.e_sid.get().strip(),
+            "tab": self.e_tab.get().strip()
+        }
+        if self.selected_task_index is not None: self.tasks[self.selected_task_index] = task
+        else: self.tasks.append(task)
+        self.save_tasks(); self.refresh_tasks_list(); self.log(f"💾 Task Saved: {name}")
+
+    def remove_task(self):
+        if self.selected_task_index is not None:
+            del self.tasks[self.selected_task_index]
+            self.save_tasks(); self.refresh_tasks_list(); self.log("🗑 Task Deleted")
+
+    def refresh_tasks_list(self):
+        self.task_list.delete(0, tk.END)
+        for t in self.tasks: self.task_list.insert(tk.END, t['name'])
 
     def log(self, msg, tag="info"):
-        self.log_box.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] {msg}\n", tag)
-        self.log_box.see(tk.END)
+        self.after(0, lambda: (self.log_box.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] {msg}\n"), self.log_box.see(tk.END)))
 
-    def refresh_table(self):
-        for i in self.tree.get_children(): self.tree.delete(i)
-        for idx, t in enumerate(self.tasks):
-            tag = 'even' if idx % 2 == 0 else 'odd'
-            self.tree.insert("", "end", values=(t['name'].upper(), len(t['fields'])), tags=(tag,))
+    def stop(self): 
+        self.stop_flag = True
+        self.log("🛑 Stop command sent...", "error")
 
-    def load_tasks(self):
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f: return json.load(f)
-        return []
+    def run(self):
+        if self.running: return
+        self.running = True; self.stop_flag = False
+        threading.Thread(target=self.start_scraping, daemon=True).start()
 
-    def save_tasks(self):
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f: json.dump(self.tasks, f, indent=2)
-
-    def start_thread(self):
-        threading.Thread(target=self.run_engine, daemon=True).start()
-
-    def run_engine(self):
+    def start_scraping(self):
         try:
-            scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-            creds = ServiceAccountCredentials.from_json_keyfile_name(SERVICE_ACCOUNT_FILE, scope)
+            creds = ServiceAccountCredentials.from_json_keyfile_name(
+                SERVICE_ACCOUNT_FILE, 
+                ['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive']
+            )
             gc = gspread.authorize(creds)
             scraper = DynamicScraper(self.log)
-            for task in self.tasks: scraper.process_task(task, gc)
-            messagebox.showinfo("Done", "All tasks finished!")
-        except Exception as e: self.log(f"ERROR: {str(e)}", "error")
+            
+            for task in self.tasks:
+                if self.stop_flag: break
+                scraper.process_task(task, gc, lambda: self.stop_flag)
+            
+            self.log("🏁 RUN COMPLETE")
+        except Exception as e:
+            self.log(f"❌ Error: {e}", "error")
+        finally:
+            self.running = False
+
+    def load_tasks(self):
+        return json.load(open(CONFIG_FILE)) if os.path.exists(CONFIG_FILE) else []
+
+    def save_tasks(self):
+        json.dump(self.tasks, open(CONFIG_FILE, "w"), indent=2)
 
 if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    App().mainloop()
