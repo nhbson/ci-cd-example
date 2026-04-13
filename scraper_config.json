@@ -1,17 +1,27 @@
 [
   {
-    "name": "BIZREACH-AI",
-    "url": "https://www.bizreach.jp/job/j/JG004/IG002/",
-    "s_link": "a[href*=\"/job/view/\"]",
-    "stats_sel": ".sg-pager-display",
-    "page_param": "p",
-    "max_pages": "160",
-    "fields": {
-      "\u4f01\u696d\u540d": ".pg-job-detail-jobcassette-name",
-      "\u4f1a\u793e\u898f\u6a21": ".pg-job-detail-company-capital",
-      "\u672c\u793e\u6240\u5728\u5730": ".pg-job-company-info-detail"
-    },
+    "name": "TableLog",
+    "url": "https://tabelog.com/hokkaido/A0101/",
+    "s_link": "a.list-rst__rst-name-target",
+    "stats_sel": ".list-controll.clearfix",
+    "page_key": "",
     "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "BIZREACH"
+    "tab": "TableLog",
+    "fields": {
+      "Shope Name": "h2.display-name",
+      "Open Time": "dl.rdheader-subinfo__item dd.rdheader-subinfo__closed-text"
+    }
+  },
+  {
+    "name": "Baseconnect",
+    "url": "https://baseconnect.in/companies/category/56ae3b2a-c8a3-4d47-bcbf-953e6dce505a",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "Baseconnect",
+    "fields": {},
+    "cookie": "",
+    "max_pages": "0",
+    "s_link": "div.d_flex.ai_flex-start.gap_l",
+    "stats_sel": "div.flex-sh_0.ml_m mr_xs.ff_yumincho.fs_2xl fw_bold",
+    "page_key": ""
   }
 ]
