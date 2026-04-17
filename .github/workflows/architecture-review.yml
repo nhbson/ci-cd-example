@@ -1,0 +1,74 @@
+name: 🤖 Architecture Review Bot
+
+on:
+    pull_request:
+        branches: [main, develop]
+
+jobs:
+    review:
+        runs-on: ubuntu-latest
+
+        steps:
+            # 1. Checkout
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            # 2. Setup PHP
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: 8.2
+                  extensions: mbstring, pdo, redis
+                  coverage: none
+
+            # 3. Install deps
+            - name: Install dependencies
+              run: composer install --no-progress --prefer-dist
+
+            # 4. Run Architecture Tests
+            - name: Run Architecture Tests
+              id: tests
+              run: |
+                  php artisan test --testsuite=Architecture > test_output.txt || true
+
+            # 5. Run PHPStan
+            - name: Run PHPStan
+              id: phpstan
+              run: |
+                  ./vendor/bin/phpstan analyse --no-progress > phpstan_output.txt || true
+
+            # 6. Build clean report
+            - name: Build Report
+              run: |
+                  echo "## 🚨 Architecture Violations Report" > report.md
+                  echo "" >> report.md
+
+                  echo "### 🧪 Failed Tests" >> report.md
+                  echo '```' >> report.md
+                  grep -E "FAIL|Error" test_output.txt || echo "No violations 🎉" >> report.md
+                  echo '```' >> report.md
+
+                  echo "" >> report.md
+                  echo "### 🧠 PHPStan Issues" >> report.md
+                  echo '```' >> report.md
+                  grep -E "error" phpstan_output.txt || echo "No issues 🎉" >> report.md
+                  echo '```' >> report.md
+
+            # 7. Comment on PR (sticky update)
+            - name: Comment PR
+              uses: marocchino/sticky-pull-request-comment@v2
+              with:
+                  path: report.md
+
+            # 8. Fail PR if violations found
+            - name: Fail if violations exist
+              run: |
+                  if grep -q "FAIL" test_output.txt || grep -q "error" phpstan_output.txt; then
+                    echo "❌ Architecture violations found"
+                    exit 1
+                  fi
+            - name: PHPStan with Reviewdog
+              uses: reviewdog/action-phpstan@v1
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  reporter: github-pr-review

@@ -1,73 +1,81 @@
 #!/bin/bash
 # setup-fail2ban-dynamic.sh
-# Ultimate dynamic Fail2Ban for Nginx + Docker + AWS EC2
+# Production-ready Fail2Ban for Nginx + EC2 + Docker-safe
+
+set -e
 
 LOG_FILE="/var/log/fail2ban-banned-ips.log"
-EMAIL_ALERT="your-email@example.com"   # <-- Change to your email
-ROTATE_CONF="/etc/logrotate.d/fail2ban-banned-ips"
 JAIL_NAME="nginx-loadtest"
 FILTER_NAME="nginx-loadtest"
+ROTATE_CONF="/etc/logrotate.d/fail2ban-banned-ips"
 
-echo "🔥 Installing Fail2Ban and mail utilities..."
-sudo apt update
+echo "🔥 Installing Fail2Ban dependencies..."
+
+sudo apt update -y
 sudo apt install fail2ban mailutils jq -y
 
-# Function to detect Docker IPs dynamically
-get_docker_ips() {
-    docker network ls -q | xargs -I {} docker network inspect {} -f '{{range .Containers}}{{.IPv4Address}} {{end}}' | awk -F/ '{print $1}' | tr '\n' ' '
-}
+# -----------------------------
+# 1. CREATE FILTER (SAFE NGINX LOG MATCH)
+# -----------------------------
+echo "🛠 Creating Fail2Ban filter..."
 
-# Function to detect AWS public Elastic IPs (optional)
-get_aws_ips() {
-    # Fetch instance metadata (EC2)
-    INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-    REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')
-    # If AWS CLI configured, list Elastic IPs (requires IAM permissions)
-    # aws ec2 describe-addresses --region $REGION --query 'Addresses[*].PublicIp' --output text
-    # For simplicity, leave empty if you don't use CLI
-    echo ""
-}
-
-# Combine whitelist: localhost + Docker + AWS
-WHITELIST="127.0.0.1/8 $(get_docker_ips) $(get_aws_ips)"
-
-echo "🛠 Creating custom Nginx filter..."
-sudo tee /etc/fail2ban/filter.d/$FILTER_NAME.conf > /dev/null <<EOL
+sudo tee /etc/fail2ban/filter.d/${FILTER_NAME}.conf > /dev/null <<'EOF'
 [Definition]
-failregex = ^<HOST> -.*"(GET|POST).*HTTP/.*" (429|500)
+failregex = ^<HOST> -.*"(GET|POST|HEAD).*HTTP/.*" (401|403|404|429|500|502|503|504)
 ignoreregex =
-EOL
+EOF
 
-# Create jail.local if it doesn't exist
-if [ ! -f /etc/fail2ban/jail.local ]; then
-    sudo touch /etc/fail2ban/jail.local
-fi
+# -----------------------------
+# 2. CLEAN OLD JAIL CONFIG
+# -----------------------------
+echo "🧹 Preparing jail configuration..."
 
-# Remove old jail section if exists
-sudo sed -i "/\[$JAIL_NAME\]/,/^$/d" /etc/fail2ban/jail.local
+sudo touch /etc/fail2ban/jail.local
 
-# Add jail
-sudo tee -a /etc/fail2ban/jail.local > /dev/null <<EOL
+# remove old jail section safely
+sudo sed -i "/\[$JAIL_NAME\]/,/^$/d" /etc/fail2ban/jail.local || true
+
+# -----------------------------
+# 3. CREATE JAIL (PRODUCTION SAFE)
+# -----------------------------
+echo "⚙️ Writing jail configuration..."
+
+sudo tee -a /etc/fail2ban/jail.local > /dev/null <<EOF
 
 [$JAIL_NAME]
-enabled  = true
-port     = http,https
-filter   = $FILTER_NAME
-logpath  = /var/log/nginx/access.log
-maxretry = 100
-findtime = 60
-bantime  = 600
-ignoreip = $WHITELIST
-action   = %(action_mwl)s
-           logban $LOG_FILE
-EOL
+enabled = true
+port = http,https
+filter = $FILTER_NAME
+logpath = /var/log/nginx/access.log
 
-# Ensure log file exists
+# SECURITY THRESHOLDS
+maxretry = 20
+findtime = 60
+bantime = 900
+
+# SAFE WHITELIST (DO NOT USE DYNAMIC DOCKER IPs)
+ignoreip = 127.0.0.1/8 ::1
+
+# ACTION
+action = %(action_mwl)s
+
+allowipv6 = auto
+EOF
+
+# -----------------------------
+# 4. LOG FILE SETUP
+# -----------------------------
+echo "📄 Ensuring log file exists..."
+
 sudo touch $LOG_FILE
 sudo chmod 644 $LOG_FILE
 
-# Setup log rotation
-sudo tee $ROTATE_CONF > /dev/null <<EOL
+# -----------------------------
+# 5. LOG ROTATION
+# -----------------------------
+echo "📦 Setting up log rotation..."
+
+sudo tee $ROTATE_CONF > /dev/null <<EOF
 $LOG_FILE {
     daily
     rotate 30
@@ -76,40 +84,74 @@ $LOG_FILE {
     notifempty
     create 644 root root
 }
-EOL
+EOF
 
-# Restart Fail2Ban
+# -----------------------------
+# 6. START FAIL2BAN SAFELY
+# -----------------------------
+echo "🚀 Starting Fail2Ban..."
+
+sudo systemctl enable fail2ban
 sudo systemctl restart fail2ban
-sudo fail2ban-client reload
 
-# Function to dynamically update whitelist on reload
-sudo tee /usr/local/bin/fail2ban-update-whitelist.sh > /dev/null <<'EOL'
+# Wait for daemon ready
+echo "⏳ Waiting for Fail2Ban..."
+for i in {1..10}; do
+    if sudo fail2ban-client ping >/dev/null 2>&1; then
+        echo "✅ Fail2Ban is ready"
+        break
+    fi
+    sleep 1
+done
+
+# -----------------------------
+# 7. RELOAD CONFIG
+# -----------------------------
+echo "🔄 Reloading Fail2Ban..."
+sudo fail2ban-client reload || true
+
+# -----------------------------
+# 8. STATUS CHECK
+# -----------------------------
+echo "📊 Fail2Ban Status:"
+sudo fail2ban-client status || true
+sudo fail2ban-client status $JAIL_NAME || echo "⚠️ Jail not active (check nginx logs)"
+
+# -----------------------------
+# 9. OPTIONAL WHITELIST SCRIPT (SAFE MODE)
+# -----------------------------
+echo "🧰 Creating whitelist updater..."
+
+sudo tee /usr/local/bin/fail2ban-update-whitelist.sh > /dev/null <<'EOF'
 #!/bin/bash
-# Update whitelist dynamically
+
 JAIL_NAME="nginx-loadtest"
-FILTER_NAME="nginx-loadtest"
-LOG_FILE="/var/log/fail2ban-banned-ips.log"
 
-# Detect Docker IPs
-DOCKER_IPS=$(docker network ls -q | xargs -I {} docker network inspect {} -f '{{range .Containers}}{{.IPv4Address}} {{end}}' | awk -F/ '{print $1}' | tr '\n' ' ')
+# SAFE MODE ONLY (DO NOT USE DYNAMIC DOCKER IPs IN PRODUCTION)
+WHITELIST="127.0.0.1/8 ::1"
 
-# Localhost always
-WHITELIST="127.0.0.1/8 $DOCKER_IPS"
+echo "Updating ignoreip..."
 
-# Update jail.local
 sudo sed -i "/\[$JAIL_NAME\]/,/^$/ s|^ignoreip =.*|ignoreip = $WHITELIST|" /etc/fail2ban/jail.local
 
-# Reload Fail2Ban
+echo "Reloading Fail2Ban..."
 sudo fail2ban-client reload
-EOL
+
+echo "Done."
+EOF
 
 sudo chmod +x /usr/local/bin/fail2ban-update-whitelist.sh
 
-echo "✅ Dynamic Fail2Ban setup complete!"
-sudo fail2ban-client status $JAIL_NAME
+# -----------------------------
+# 10. DONE
+# -----------------------------
+echo "🛡 Fail2Ban setup completed successfully!"
+echo ""
 echo "📄 Log file: $LOG_FILE"
-echo "📧 Email alerts: $EMAIL_ALERT"
-echo "🛡 Docker & AWS dynamic whitelist active"
-
-echo "💡 To refresh whitelist after new Docker containers, run:"
-echo "sudo /usr/local/bin/fail2ban-update-whitelist.sh"
+echo "📌 Jail: $JAIL_NAME"
+echo ""
+echo "👉 Useful commands:"
+echo "  sudo fail2ban-client status $JAIL_NAME"
+echo "  sudo fail2ban-client status"
+echo "  sudo tail -f /var/log/fail2ban.log"
+echo "  sudo /usr/local/bin/fail2ban-update-whitelist.sh"

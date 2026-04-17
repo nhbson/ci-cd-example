@@ -1,0 +1,64 @@
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    env_file: .env
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - redis
+      - mysql
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=90
+    deploy:
+      replicas: 10
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+    deploy:
+      replicas: 1
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: secret
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
+  redis_data:

@@ -1,27 +1,156 @@
 [
   {
-    "name": "TableLog",
-    "url": "https://tabelog.com/hokkaido/A0101/",
-    "s_link": "a.list-rst__rst-name-target",
-    "stats_sel": ".list-controll.clearfix",
-    "page_key": "",
+    "name": "HOTPEPPER_IKEBUKURO_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAB/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
     "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "TableLog",
+    "tab": "\u6c60\u888b\u30fb\u76ee\u767d",
     "fields": {
-      "Shope Name": "h2.display-name",
-      "Open Time": "dl.rdheader-subinfo__item dd.rdheader-subinfo__closed-text"
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
     }
   },
   {
-    "name": "Baseconnect",
-    "url": "https://baseconnect.in/companies/category/56ae3b2a-c8a3-4d47-bcbf-953e6dce505a",
+    "name": "HOTPEPPER_SHINJUKU_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAA/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
     "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "Baseconnect",
-    "fields": {},
-    "cookie": "",
-    "max_pages": "0",
-    "s_link": "div.d_flex.ai_flex-start.gap_l",
-    "stats_sel": "div.flex-sh_0.ml_m mr_xs.ff_yumincho.fs_2xl fw_bold",
-    "page_key": ""
+    "tab": "\u65b0\u5bbf\u30fb\u9ad8\u7530\u99ac\u5834\u30fb\u4ee3\u3005\u6728",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_SHIBUYA_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAD/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u6e0b\u8c37",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_AKABANE_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macJC/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u8d64\u7fbd",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_OCHANOMIZU_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAV/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u5fa1\u8336\u30ce\u6c34",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_EBISU_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAC/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u6075\u6bd4\u5bff",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_UENO_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAG/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u4e0a\u91ce",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_GINZA_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAF/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u9280\u5ea7",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_SHINAGAWA_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAH/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u54c1\u5ddd",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_RYOGOKU_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macJP/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u4e21\u56fd",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
+  },
+  {
+    "name": "HOTPEPPER_TOYOSU_ESTHE",
+    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macJQ/",
+    "s_link": "a[href*='/esthe/slnH']",
+    "stats_sel": ".searchResultNum",
+    "page_key": "pn",
+    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
+    "tab": "\u8c4a\u6d32",
+    "fields": {
+      "\u5e97\u8217\u540d": ".detailTitle",
+      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
+      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+    }
   }
 ]
