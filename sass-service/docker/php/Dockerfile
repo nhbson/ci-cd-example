@@ -16,6 +16,11 @@ RUN docker-php-ext-install pdo_mysql mbstring zip pcntl
 RUN pecl install redis && docker-php-ext-enable redis
 RUN pecl install swoole-5.1.3 && docker-php-ext-enable swoole
 
+RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini \
+ && echo "opcache.memory_consumption=256" >> /usr/local/etc/php/conf.d/opcache.ini \
+ && echo "opcache.max_accelerated_files=20000" >> /usr/local/etc/php/conf.d/opcache.ini \
+ && echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini
+ 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 COPY src /var/www

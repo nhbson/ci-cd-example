@@ -221,4 +221,15 @@ return [
 
     'max_execution_time' => 30,
 
+    'swoole' => [
+        'options' => [
+            'worker_num' => swoole_cpu_num() * 2,
+            'max_request' => 10000,
+            'dispatch_mode' => 2,
+            'open_tcp_nodelay' => true,
+            'socket_buffer_size' => 128 * 1024 * 1024,
+            'buffer_output_size' => 128 * 1024 * 1024,
+        ],
+    ],
+
 ];
