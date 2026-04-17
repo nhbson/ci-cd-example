@@ -223,7 +223,7 @@ return [
 
     'swoole' => [
         'options' => [
-            'worker_num' => swoole_cpu_num() * 2,
+            'worker_num' => 1,
             'max_request' => 10000,
             'dispatch_mode' => 2,
             'open_tcp_nodelay' => true,

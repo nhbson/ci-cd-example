@@ -5,31 +5,61 @@ services:
       - "80:80"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./src:/var/www # ✅ FIX: bind mount đúng
     depends_on:
-      - app
+      - app1
+      - app2
+      - app3
 
-  app:
+  app1:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    volumes:
-      - ./src:/var/www
     env_file: .env
     depends_on:
       - redis
       - mysql
-    command: php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000 --workers=auto --task-workers=8 --max-requests=10000
-    # command:
-    #   - php
-    #   - artisan
-    #   - octane:start
-    #   - --server=swoole
-    #   - --host=0.0.0.0
-    #   - --port=8000
-    #   - --workers=auto
-    #   - --task-workers=8
-    #   - --max-requests=10000
+    command: >
+      php artisan octane:start
+      --server=swoole
+      --host=0.0.0.0
+      --port=8000
+      --workers=1
+      --task-workers=2
+      --max-requests=10000
+
+  app2:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    env_file: .env
+    depends_on:
+      - redis
+      - mysql
+    command: >
+      php artisan octane:start
+      --server=swoole
+      --host=0.0.0.0
+      --port=8000
+      --workers=1
+      --task-workers=2
+      --max-requests=10000
+
+  app3:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    env_file: .env
+    depends_on:
+      - redis
+      - mysql
+    command: >
+      php artisan octane:start
+      --server=swoole
+      --host=0.0.0.0
+      --port=8000
+      --workers=1
+      --task-workers=2
+      --max-requests=10000
 
   worker:
     build:
@@ -43,17 +73,19 @@ services:
 
   redis:
     image: redis:7
+    command: redis-server --save "" --appendonly no
     volumes:
       - redis_data:/data
 
   mysql:
-    image: mysql:8.4 # hoặc giữ mysql:8 nhưng hiểu nó là 8.4
+    image: mysql:8.4
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: app
       MYSQL_USER: app
       MYSQL_PASSWORD: secret
-    command: --character-set-server=utf8mb4
+    command: >
+      --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
@@ -61,4 +93,3 @@ services:
 volumes:
   mysql_data:
   redis_data:
-  vendor:

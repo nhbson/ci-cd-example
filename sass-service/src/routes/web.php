@@ -7,5 +7,5 @@ Route::get('/', function () {
 });
 
 Route::get('/ping', function () {
-    return response()->json(['ok' => true]);
+    return response('pong', 200)->header('Content-Type', 'text/plain');
 });
