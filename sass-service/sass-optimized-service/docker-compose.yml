@@ -1,0 +1,43 @@
+services:
+  nginx:
+    image: nginx:latest
+    ports: ["80:80"]
+    volumes: ["./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on: [app]
+    networks: [sass-network]
+
+  app:
+    build: { context: ., dockerfile: docker/php/Dockerfile }
+    volumes: ["./src:/var/www"]
+    env_file: .env
+    # Aggressive worker count for high RPS
+    command: php artisan octane:start --server=swoole --host=0.0.0.0 --port=8000 --workers=64 --task-workers=16 --max-requests=10000
+    deploy:
+      resources:
+        limits: { cpus: '6.0', memory: 8G }
+    networks: [sass-network]
+
+  worker:
+    build: { context: ., dockerfile: docker/php/Dockerfile }
+    volumes: ["./src:/var/www", "./docker/supervisor/worker.conf:/etc/supervisor/conf.d/worker.conf:ro"]
+    env_file: .env
+    command: /usr/bin/supervisord -n -c /etc/supervisor/conf.d/worker.conf
+    networks: [sass-network]
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save "" --appendonly no
+    networks: [sass-network]
+
+  mysql:
+    image: mysql:8.4
+    environment: { MYSQL_ROOT_PASSWORD: root, MYSQL_DATABASE: app }
+    command: >
+      --innodb-buffer-pool-size=2G
+      --innodb-flush-log-at-trx-commit=2
+      --max-connections=1000
+    volumes: ["mysql_data:/var/lib/mysql"]
+    networks: [sass-network]
+
+networks: { sass-network: { driver: bridge } }
+volumes: { mysql_data: }
