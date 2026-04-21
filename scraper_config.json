@@ -1,156 +1,25 @@
 [
   {
-    "name": "HOTPEPPER_IKEBUKURO_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAB/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
+    "name": "HELLOWORK_HAKEN_FULL",
+    "url": "https://jinzai.hellowork.mhlw.go.jp/JinzaiWeb/GICB102010.do",
+    "method": "POST",
+    "payload_raw": "cbHokkaido=1&cbMiyagi=1&cbKanto=1&cbIbaragi=1&cbTochigi=1&cbGunma=1&cbSaitama=1&cbChiba=1&cbTokyo=1&cbKanagawa=1&cbTokai=1&cbGifu=1&cbShizuoka=1&cbAichi=1&cbMie=1&cbShiga=1&cbKyoto=1&cbOsaka=1&cbHyogo=1&cbOkayama=1&cbHiroshima=1&cbFukuoka=1&cbJigyonushiName=1&cbJigyoshoName=1",
+    "s_link": "a[href*='GICB102020']",
+    "stats_sel": ".accesscount, #ID_lbSearchCount",
+    "page_key": "curPage",
     "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u6c60\u888b\u30fb\u76ee\u767d",
+    "tab": "派遣",
     "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_SHINJUKU_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAA/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u65b0\u5bbf\u30fb\u9ad8\u7530\u99ac\u5834\u30fb\u4ee3\u3005\u6728",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_SHIBUYA_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAD/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u6e0b\u8c37",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_AKABANE_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macJC/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u8d64\u7fbd",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_OCHANOMIZU_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAV/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u5fa1\u8336\u30ce\u6c34",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_EBISU_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAC/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u6075\u6bd4\u5bff",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_UENO_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAG/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u4e0a\u91ce",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_GINZA_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAF/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u9280\u5ea7",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_SHINAGAWA_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macAH/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u54c1\u5ddd",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_RYOGOKU_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macJP/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u4e21\u56fd",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
-    }
-  },
-  {
-    "name": "HOTPEPPER_TOYOSU_ESTHE",
-    "url": "https://beauty.hotpepper.jp/esthe/svcSA/macJQ/",
-    "s_link": "a[href*='/esthe/slnH']",
-    "stats_sel": ".searchResultNum",
-    "page_key": "pn",
-    "sheet_id": "19cpI7FRotk1YvePyrFWIOwsFmCOxSbwfp85goXZbgE4",
-    "tab": "\u8c4a\u6d32",
-    "fields": {
-      "\u5e97\u8217\u540d": ".detailTitle",
-      "\u4f1a\u793e\u4f4f\u6240": ".detailAddress",
-      "\u96fb\u8a71\u756a\u53f7": ".detailTel"
+      "許可番号": "#ID_lbKyokatodokedeNo",
+      "許可年月日": "#ID_lbKyokatodokedeDate",
+      "事業主名称": "#ID_lbJigyonushiName",
+      "事業所名称": "#ID_lbJigyoshoName",
+      "所在地": "#ID_lbJigyoshoAddress",
+      "電話番号": "#ID_lbTel",
+      "派遣料金平均": "#ID_lbRyokinaveValue",
+      "賃金平均": "#ID_lbChinginaveValue",
+      "マージン率": "#ID_lbPMargin",
+      "労使協定": "#ID_lbRoshikyoteiHani"
     }
   }
 ]
