@@ -2,4 +2,4 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/ping', fn() => 'ok');
+Route::get('/ping', fn() => 'ok!');
